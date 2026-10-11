@@ -12,6 +12,7 @@ jobs:
   test:
     name: Lint and test (SQLite and PostgreSQL)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     services:
       postgres:
         image: postgres:17-alpine
@@ -46,6 +47,7 @@ jobs:
   docker:
     name: Build image and smoke-test it
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: test
     steps:
       - uses: actions/checkout@v7

@@ -48,8 +48,12 @@ def test_password_is_hashed_with_argon2(client):
     from app.models import User
 
     signup(client)
-    db = next(app.dependency_overrides[get_db]())
+    # Close the session afterwards: an open transaction would block the next test
+    # from resetting the tables on PostgreSQL.
+    sessions = app.dependency_overrides[get_db]()
+    db = next(sessions)
     stored = db.scalar(select(User)).password_hash
+    sessions.close()
     assert stored.startswith("$argon2id$")
     assert "correct horse" not in stored
 
