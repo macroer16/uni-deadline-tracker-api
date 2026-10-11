@@ -44,11 +44,28 @@ jobs:
         env:
           TEST_DATABASE_URL: postgresql+psycopg://test:test@localhost:5432/test
 
+  web:
+    name: Front end (type-check, test, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
   docker:
-    name: Build image and smoke-test it
+    name: Build images and smoke-test them
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: test
+    needs: [test, web]
     steps:
       - uses: actions/checkout@v7
       - name: Start the API and PostgreSQL with Docker Compose
@@ -64,10 +81,18 @@ jobs:
           curl -fsS -X POST localhost:8000/deadlines -H "Authorization: Bearer $TOKEN" -H 'content-type: application/json' \
             -d '{"title":"Smoke test","due_at":"2030-01-01T09:00:00Z"}'
           curl -fsS localhost:8000/deadlines -H "Authorization: Bearer $TOKEN" | jq -e 'length == 1'
-      - name: Container runs as a non-root user
-        run: test "$(docker compose exec -T api id -u)" != "0"
+      - name: The web app serves the front end and forwards /api
+        run: |
+          set -e
+          curl -fsS localhost:8080/ | grep -q '<div id="root">'
+          curl -fsS localhost:8080/api/health
+          curl -fsSI localhost:8080/ | grep -qi content-security-policy
+      - name: Containers run as non-root users
+        run: |
+          test "$(docker compose exec -T api id -u)" != "0"
+          test "$(docker compose exec -T web id -u)" != "0"
       - name: Image size
-        run: docker image ls --format '{{.Repository}}:{{.Tag}} {{.Size}}' | grep api
+        run: docker image ls --format '{{.Repository}}:{{.Tag}} {{.Size}}' | grep -E 'api|web'
       - if: failure()
         run: docker compose logs
 

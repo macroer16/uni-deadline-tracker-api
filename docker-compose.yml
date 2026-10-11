@@ -1,4 +1,5 @@
-# Runs the API with a real PostgreSQL database: docker compose up --build
+# Runs the web app, API and PostgreSQL together: docker compose up --build
+# Then open http://localhost:8080
 services:
   db:
     image: postgres:17-alpine
@@ -18,10 +19,19 @@ services:
     ports:
       - "8000:8000"
     environment:
+      UVICORN_ROOT_PATH: /api
       DATABASE_URL: postgresql+psycopg://deadlines:local-only-password@db:5432/deadlines
       JWT_SECRET: ${JWT_SECRET:-local-development-secret-change-me-in-prod}
     depends_on:
       db:
+        condition: service_healthy
+
+  web:
+    build: ./web
+    ports:
+      - "8080:8080"
+    depends_on:
+      api:
         condition: service_healthy
 
 volumes:

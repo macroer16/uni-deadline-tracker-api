@@ -21,3 +21,13 @@ updates:
     directory: /infra
     schedule:
       interval: monthly
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: monthly
+    groups:
+      all:
+        patterns: ["*"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
