@@ -2,11 +2,13 @@
 
 [![CI](https://github.com/macroer16/uni-deadline-tracker-api/actions/workflows/ci.yml/badge.svg)](https://github.com/macroer16/uni-deadline-tracker-api/actions/workflows/ci.yml)
 
-A REST API for keeping track of university coursework deadlines. You add modules and deadlines, it tells you what's overdue or due soon, and it gives you a private calendar link so every deadline shows up in Google, Outlook or Apple Calendar with a reminder the day before.
+A full-stack app for keeping track of university coursework deadlines: a FastAPI back end, a React front end and PostgreSQL. You add modules and deadlines, it tells you what's overdue or due soon, and it gives you a private calendar link so every deadline shows up in Google, Outlook or Apple Calendar with a reminder the day before.
 
 Built with Python and FastAPI, tested against SQLite and real PostgreSQL, packaged with Docker, with AWS infrastructure written in Terraform (Lambda, API Gateway, CloudWatch alarms, a budget alert and keyless GitHub deploys).
 
-![Interactive API documentation showing the auth, modules, deadlines, calendar and health endpoints](docs/api-docs.png)
+![The web app: the next deadline counting down at the top, then overdue, next 48 hours, this week and later](docs/web-dashboard.png)
+
+It also runs on my Kubernetes platform, with GitOps, policy enforcement and monitoring: see [k8s-gitops-platform](https://github.com/macroer16/k8s-gitops-platform).
 
 ## Why I built it
 
@@ -24,7 +26,12 @@ In my first term I had deadlines spread across several modules, each announced i
 | Account deletion | `DELETE /me` removes the account and all its data. |
 | Health checks | `/health` checks the database; `/health/live` only checks the app is running. |
 
-Interactive docs are at `/docs` when it's running.
+| Web app | React and TypeScript front end (in `web/`). The next deadline counts down in large type at the top, and anything due within 48 hours gets a highlighter mark. Works on phones. |
+| Metrics | `/metrics` for Prometheus: request counts and latency per route, plus sign-ups, deadlines created and failed logins. Routes are labelled by template (`/deadlines/{deadline_id}`), so IDs and calendar tokens never appear in metrics. |
+
+Interactive API docs are at `/docs` when it's running:
+
+![Interactive API documentation](docs/api-docs.png)
 
 ## Security decisions
 
@@ -80,24 +87,32 @@ cp .env.example .env            # then set JWT_SECRET (the command to generate o
 uvicorn app.main:app --reload   # open http://127.0.0.1:8000/docs
 ```
 
-Or with PostgreSQL in Docker:
+The front end, in a second terminal:
 
 ```bash
-docker compose up --build       # http://localhost:8000/docs
+cd web && npm install && npm run dev   # http://localhost:5173 (forwards /api to the API)
+```
+
+Or everything (web, API and PostgreSQL) in Docker:
+
+```bash
+docker compose up --build       # web app on http://localhost:8080
 ```
 
 ## Tests
 
 ```bash
-pytest                          # 44 tests on in-memory SQLite
+pytest                          # 47 tests on in-memory SQLite
+cd web && npm test              # front-end tests (countdown, grouping)
 TEST_DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/db pytest   # the same tests on PostgreSQL
 ruff check . && ruff format --check .
 ```
 
-CI runs on every push and has three jobs:
+CI runs on every push and has four jobs:
 1. Lint, then the full test suite twice: once on SQLite and once on a real PostgreSQL service.
-2. Build the Docker image, start it with Docker Compose and Postgres, call the running API with `curl` (register, log in, create and list a deadline), and check the container isn't running as root.
-3. `terraform fmt`, `init` and `validate`.
+2. Front end: type-check, tests, production build.
+3. Build both images, start web, API and Postgres with Docker Compose, call the running app with `curl` (register, log in, create and list a deadline, load the web page through nginx) and check neither container runs as root.
+4. `terraform fmt`, `init` and `validate`.
 
 ## Deploy to AWS
 
@@ -141,8 +156,9 @@ app/
   urgency.py        overdue, due soon or this week (pure function)
   ics.py            iCalendar feed (RFC 5545 escaping and line folding)
   routers/          auth, modules, deadlines, calendar
-tests/              44 tests: auth, isolation, deadlines, urgency, calendar, config
+tests/              47 tests: auth, isolation, deadlines, urgency, calendar, config
 infra/              Terraform: ECR, Lambda, API Gateway, SSM, alarms, budget, GitHub OIDC
+web/                React + TypeScript front end, Vite, Vitest; served by non-root nginx with a strict CSP
 Dockerfile          multi-stage, non-root, health check, Lambda-ready
 docker-compose.yml  API and PostgreSQL for local use
 ```
@@ -163,5 +179,4 @@ TODO: in my own words.
 
 - Alembic migrations
 - Per-account login throttling
-- A small front end (or a Discord bot) that uses this API
 - Email reminders through Amazon SES
