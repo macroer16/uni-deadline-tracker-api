@@ -1,0 +1,137 @@
+/* Due. One family (Archivo) used at two widths: condensed for the countdown, normal for reading.
+   The one bold idea is the highlighter: anything due soon gets a yellow swipe behind it. */
+:root {
+  --paper: #f1f3f6;
+  --sheet: #ffffff;
+  --ink: #17212b;
+  --muted: #5e6b77;
+  --rule: #d6dbe1;
+  --highlighter: #f4d23c;
+  --overdue: #bf3a2b;
+  --done: #2d7a57;
+  --focus: #2b5fd9;
+  --font: "Archivo Variable", "Archivo", system-ui, sans-serif;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 16px/1.5 var(--font);
+  font-variation-settings: "wdth" 100;
+}
+h1, h2, p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* The highlighter swipe: a slightly tilted, uneven band behind the text, like a real pen stroke. */
+.mark {
+  background:
+    linear-gradient(100deg, transparent 0.4em, var(--highlighter) 0.5em, var(--highlighter) calc(100% - 0.5em), transparent calc(100% - 0.35em))
+    0 62% / 100% 0.62em no-repeat;
+  padding: 0 0.15em;
+  margin: 0 -0.15em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.wordmark { font-size: 3.5rem; font-weight: 800; font-variation-settings: "wdth" 70; letter-spacing: -0.01em; line-height: 1; }
+.wordmark.small { font-size: 1.6rem; }
+
+/* ---- Buttons ---- */
+button { cursor: pointer; }
+.primary { background: var(--ink); color: var(--paper); border: 0; border-radius: 6px; padding: 0.6em 1.1em; font-weight: 600; }
+.primary:hover { background: #2a3744; }
+.primary:disabled { opacity: 0.6; cursor: progress; }
+.quiet { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 0.45em 0.9em; }
+.quiet:hover { border-color: var(--muted); }
+.danger { background: none; border: 1px solid transparent; color: var(--overdue); padding: 0.45em 0.6em; border-radius: 6px; }
+.danger:hover { border-color: var(--overdue); }
+.link { background: none; border: 0; padding: 0; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.icon { background: none; border: 0; color: var(--muted); font-size: 1.2rem; line-height: 1; padding: 0 0.3em; border-radius: 4px; }
+.icon:hover { color: var(--overdue); }
+
+input, select, textarea { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 0.5em 0.65em; width: 100%; }
+label { display: grid; gap: 0.3em; font-size: 0.9rem; font-weight: 600; }
+.hint, .quiet-text { color: var(--muted); font-weight: 400; font-size: 0.875rem; }
+.error { color: var(--overdue); font-weight: 600; }
+
+/* ---- Sign in ---- */
+.signin { max-width: 26rem; margin: 12vh auto 4rem; padding: 0 16px; }
+.signin-lede { margin: 1rem 0 2rem; font-size: 1.125rem; color: var(--muted); }
+.signin-form { display: grid; gap: 1rem; }
+.switch { margin-top: 1.5rem; color: var(--muted); }
+
+/* ---- App shell ---- */
+.topbar { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; border-bottom: 1px solid var(--rule); }
+.account { display: flex; gap: 1rem; align-items: baseline; font-size: 0.9rem; }
+.email { color: var(--muted); }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 19rem; gap: 3rem; max-width: 72rem; margin: 0 auto; padding: 2.5rem 24px 4rem; }
+
+/* Next up: the hero. The countdown is set condensed and very large. */
+.next { padding-bottom: 2rem; margin-bottom: 1rem; border-bottom: 2px solid var(--ink); }
+.next-label { color: var(--muted); font-weight: 600; }
+.next-title { font-size: clamp(1.6rem, 3vw, 2.1rem); font-weight: 700; line-height: 1.2; margin: 0.2rem 0 0.6rem; max-width: 30ch; }
+.next-countdown {
+  font-size: clamp(3rem, 9vw, 6.5rem);
+  font-weight: 800;
+  font-variation-settings: "wdth" 62;
+  line-height: 0.95;
+  letter-spacing: -0.015em;
+  font-variant-numeric: tabular-nums;
+}
+.next-when { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; margin: 0.9rem 0 1.4rem; color: var(--muted); }
+
+/* Groups and rows: plain rows separated by spacing and a hairline, not boxes. */
+.group { margin-top: 2.2rem; }
+.group h2 { font-size: 1.05rem; font-weight: 700; display: flex; gap: 0.5rem; align-items: baseline; }
+.group .count { color: var(--muted); font-weight: 500; font-size: 0.9rem; }
+.group-overdue h2 { color: var(--overdue); }
+.group-done h2 { color: var(--done); }
+.group ul { list-style: none; margin: 0.4rem 0 0; padding: 0; }
+.row { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 0; border-bottom: 1px solid var(--rule); }
+.row-main { flex: 1; min-width: 0; display: grid; gap: 0.15rem; }
+.row-title { background: none; border: 0; padding: 0; text-align: left; font-weight: 600; font-size: 1.05rem; display: flex; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; }
+.row-title:hover > span:last-child { text-decoration: underline; text-underline-offset: 3px; }
+.row-when { display: flex; flex-wrap: wrap; gap: 0 1rem; color: var(--muted); font-size: 0.9rem; }
+.group-overdue .rel { color: var(--overdue); font-weight: 600; }
+.group-done .row-title { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--done); }
+.row select { width: auto; font-size: 0.875rem; padding: 0.3em 0.5em; }
+.code { font-size: 0.8rem; font-weight: 700; font-variation-settings: "wdth" 80; color: var(--muted); border: 1px solid var(--rule); border-radius: 4px; padding: 0 0.35em; background: var(--sheet); }
+.show-done { margin-top: 2rem; color: var(--muted); }
+
+/* ---- Sidebar ---- */
+.side { display: grid; gap: 2.5rem; align-content: start; }
+.side h2 { font-size: 1.05rem; margin-bottom: 0.6rem; }
+.modules { list-style: none; padding: 0; margin: 0 0 0.8rem; }
+.modules li { display: grid; grid-template-columns: auto 1fr auto auto; gap: 0.6rem; align-items: center; padding: 0.4rem 0; border-bottom: 1px solid var(--rule); }
+.module-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.module-count { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 0.9rem; }
+.module-form { display: grid; grid-template-columns: 6rem 1fr auto; gap: 0.5rem; }
+.calendar-url { font-size: 0.8rem; margin: 0.8rem 0 0.5rem; }
+.calendar-actions { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.6rem; }
+
+/* ---- Dialog ---- */
+.dialog { border: 0; border-radius: 10px; padding: 0; width: min(34rem, calc(100vw - 32px)); color: var(--ink); box-shadow: 0 20px 60px rgba(23, 33, 43, 0.25); }
+.dialog::backdrop { background: rgba(23, 33, 43, 0.45); }
+.dialog form { display: grid; gap: 1rem; padding: 1.5rem; }
+.dialog h2 { font-size: 1.3rem; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.dialog-actions { display: flex; gap: 0.6rem; align-items: center; }
+.spacer { flex: 1; }
+
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; gap: 2rem; padding: 1.5rem 16px 3rem; }
+  .topbar { padding: 12px 16px; }
+  .email { display: none; }
+}
+@media (max-width: 480px) {
+  .two { grid-template-columns: 1fr; }
+  .row { align-items: flex-start; flex-direction: column; gap: 0.4rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
