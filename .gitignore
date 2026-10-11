@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.db
+.env
+# Terraform
+infra/.terraform/
+infra/*.tfstate*
+infra/*.tfvars
+!infra/example.tfvars
+infra/.terraform.lock.hcl.bak
