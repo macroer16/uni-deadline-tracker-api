@@ -5,6 +5,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 
 from app.config import settings
+from app.metrics import LOGIN_FAILURES, USERS_REGISTERED
 from app.models import User
 from app.schemas import CalendarLink, Token, UserCreate, UserOut
 from app.security import (
@@ -27,6 +28,7 @@ def register(body: UserCreate, db: DB):
     user = User(email=body.email, password_hash=hash_password(body.password))
     db.add(user)
     db.commit()
+    USERS_REGISTERED.inc()
     return user
 
 
@@ -35,6 +37,7 @@ def login(form: Annotated[OAuth2PasswordRequestForm, Depends()], db: DB):
     user = db.scalar(select(User).where(User.email == form.username.lower()))
     # Same message for "no such user" and "wrong password", so emails can't be discovered.
     if not verify_password(form.password, user.password_hash if user else None):
+        LOGIN_FAILURES.inc()
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Wrong email or password", headers={"WWW-Authenticate": "Bearer"})
     return Token(access_token=create_access_token(user.id), expires_in=settings.token_minutes * 60)
 

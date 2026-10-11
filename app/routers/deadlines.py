@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.db import utcnow
+from app.metrics import DEADLINES_CREATED
 from app.models import Deadline
 from app.routers.modules import own_module
 from app.schemas import DeadlineCreate, DeadlineOut, DeadlineUpdate, Status
@@ -71,6 +72,7 @@ def create_deadline(body: DeadlineCreate, user: CurrentUser, db: DB):
     d = Deadline(owner_id=user.id, **body.model_dump())
     db.add(d)
     db.commit()
+    DEADLINES_CREATED.inc()
     db.refresh(d)
     return to_out(d, utcnow())
 

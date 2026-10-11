@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from sqlalchemy import text
 
+from app import metrics
 from app.db import Base, engine
 from app.routers import auth, calendar, deadlines, modules
 from app.security import DB
@@ -21,6 +22,7 @@ app = FastAPI(
     description="Track coursework deadlines by module, see what's urgent, and subscribe to them in your calendar.",
     lifespan=lifespan,
 )
+metrics.install(app)
 app.include_router(auth.router)
 app.include_router(modules.router)
 app.include_router(deadlines.router)
