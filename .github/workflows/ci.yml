@@ -93,8 +93,14 @@ jobs:
           test "$(docker compose exec -T web id -u)" != "0"
       - name: Image size
         run: docker image ls --format '{{.Repository}}:{{.Tag}} {{.Size}}' | grep -E 'api|web'
-      - if: failure()
-        run: docker compose logs
+      - name: Show what went wrong
+        if: failure()
+        run: |
+          docker compose ps -a
+          docker compose logs --tail 60
+          # Also as an annotation, so it's visible on the run page without opening the log.
+          msg=$( (docker compose ps -a; docker compose logs --tail 25) 2>&1 | tail -60 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')
+          echo "::error title=docker compose state::${msg}"
 
   terraform:
     name: Terraform format and validate
