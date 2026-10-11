@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Lint and test (SQLite and PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - run: pip install -r requirements-dev.txt
+      - name: Lint
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: Tests on SQLite
+        run: pytest -q
+      - name: Same tests on real PostgreSQL
+        run: pytest -q
+        env:
+          TEST_DATABASE_URL: postgresql+psycopg://test:test@localhost:5432/test
+
+  docker:
+    name: Build image and smoke-test it
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v7
+      - name: Start the API and PostgreSQL with Docker Compose
+        run: docker compose up --build --detach --wait
+      - name: Use the running API
+        run: |
+          set -e
+          curl -fsS localhost:8000/health
+          curl -fsS -X POST localhost:8000/auth/register -H 'content-type: application/json' \
+            -d '{"email":"ci@example.com","password":"a long ci password"}'
+          TOKEN=$(curl -fsS -X POST localhost:8000/auth/login \
+            --data-urlencode username=ci@example.com --data-urlencode 'password=a long ci password' | jq -r .access_token)
+          curl -fsS -X POST localhost:8000/deadlines -H "Authorization: Bearer $TOKEN" -H 'content-type: application/json' \
+            -d '{"title":"Smoke test","due_at":"2030-01-01T09:00:00Z"}'
+          curl -fsS localhost:8000/deadlines -H "Authorization: Bearer $TOKEN" | jq -e 'length == 1'
+      - name: Container runs as a non-root user
+        run: test "$(docker compose exec -T api id -u)" != "0"
+      - name: Image size
+        run: docker image ls --format '{{.Repository}}:{{.Tag}} {{.Size}}' | grep api
+      - if: failure()
+        run: docker compose logs
+
+  terraform:
+    name: Terraform format and validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false
+      - run: terraform validate

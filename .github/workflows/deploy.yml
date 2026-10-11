@@ -1,0 +1,52 @@
+name: Deploy to AWS
+
+# Manual only, and only does anything once the AWS infrastructure exists
+# and the AWS_DEPLOY_ROLE_ARN repository variable is set (see README).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # needed to request the OIDC token
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: vars.AWS_DEPLOY_ROLE_ARN != ''
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'eu-west-2' }}
+      FUNCTION: uni-deadline-tracker
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Get temporary AWS credentials (no stored keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push the image
+        id: image
+        run: |
+          IMAGE="${{ steps.ecr.outputs.registry }}/${FUNCTION}:${GITHUB_SHA::12}"
+          docker build --provenance=false -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "uri=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Point Lambda at the new image
+        run: |
+          aws lambda update-function-code --function-name "$FUNCTION" --image-uri "${{ steps.image.outputs.uri }}" > /dev/null
+          aws lambda wait function-updated-v2 --function-name "$FUNCTION"
+
+      - name: Check the live API is healthy
+        run: |
+          URL=$(aws apigatewayv2 get-apis --query "Items[?Name=='${FUNCTION}'].ApiEndpoint | [0]" --output text)
+          curl -fsS --retry 5 --retry-delay 3 "$URL/health"
